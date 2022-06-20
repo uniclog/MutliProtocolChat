@@ -1,5 +1,7 @@
 package local.uniclog.client;
 
+import lombok.SneakyThrows;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,6 +19,7 @@ class UdpClient {
         client.init();
     }
 
+    @SneakyThrows
     public void init() {
         try {
             address = InetAddress.getByName(host);
@@ -28,6 +31,10 @@ class UdpClient {
             udpReceiverThread.start();
 
             System.out.println("udp client init...");
+
+            String message = "hello all";
+            DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), 0, message.length(), address, port);
+            udpClientSocket.send(sendPacket);
         } catch (SocketException e) {
             e.printStackTrace();
         } catch (UnknownHostException e) {
@@ -53,9 +60,13 @@ class UdpClient {
             String message = null;
             try {
                 while ((message = bufferedReader.readLine()) != null) {
+                    // отправка сообщения
                     DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), 0, message.length(), serverIPAddress, port);
                     udpClientSocket.send(sendPacket);
                     System.out.println("Send:" + message);
+                    if (message.equals("exit")) {
+                        System.exit(0);
+                    }
                 }
             } catch (IOException e) {
                 System.err.println(e.getMessage());
