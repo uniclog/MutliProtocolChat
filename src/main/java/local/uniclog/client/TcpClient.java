@@ -39,6 +39,9 @@ public class TcpClient {
                 String msg = scanner.nextLine();
                 printWriter.println(msg);
                 System.out.println("send: " + msg);
+                if (msg.equals("exit")) {
+                    System.exit(0);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

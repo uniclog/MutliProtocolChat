@@ -1,4 +1,4 @@
-package local.uniclog.server;
+package local.uniclog.server.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
