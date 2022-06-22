@@ -1,2 +1,3 @@
 rootProject.name = 'MutliProtocolChat'
-
+include 'module_client_side'
+include 'module_server_side'
