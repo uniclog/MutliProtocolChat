@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -20,6 +21,11 @@ public class TCPService extends Thread implements Protocol {
     private ServerSocket finalTcpServerSocket;
     private List<Connection> tcpClients = Collections.synchronizedList(new ArrayList<>());
     private Consumer<String> callback;
+    private final Consumer<String> textToConsole;
+
+    public TCPService(Consumer<String> callback) {
+        this.textToConsole = callback;
+    }
 
     public void setLoop(Boolean loop) {
         this.loop.set(loop);
@@ -39,24 +45,31 @@ public class TCPService extends Thread implements Protocol {
     public void sendMessageToAllClients(String message) {
         tcpClients.forEach(client -> {
             client.printWriter.println(message);
-            System.out.printf("TCP: send - %s (%s)%n", message, client.socket);
+            sendMessageToConsole(String.format("TCP: send - %s (%s)%n", message, client.socket));
         });
     }
 
     @Override
     public void run() {
-        System.out.println("tcp: waiting for clients...");
+        sendMessageToConsole("tcp: waiting for clients...");
         while (loop.get()) {
             try {
                 Socket socket = finalTcpServerSocket.accept();
                 Connection con = new Connection(socket);
                 tcpClients.add(con);
-                System.out.println("Add TCP client - " + con.socket.toString());
+                sendMessageToConsole("Add TCP client - " + con.socket.toString());
                 con.start();
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
+        }
+    }
+
+    public void sendMessageToConsole(String message) {
+        System.out.println(message);
+        if (Objects.nonNull(textToConsole)) {
+            textToConsole.accept(message);
         }
     }
 
@@ -84,11 +97,11 @@ public class TCPService extends Thread implements Protocol {
                 try {
                     str = bufferedReader.readLine();
                     if (str.equals("exit")) {
-                        System.out.printf("TCP: client - %s : lost connection%n", socket.toString());
+                        sendMessageToConsole(String.format("TCP: client - %s : lost connection%n", socket.toString()));
                         tcpClients.remove(this);
                         break;
                     }
-                    System.out.println("\n TCP: receive - " + str + " from: " + socket.toString());
+                    sendMessageToConsole("\n TCP: receive - " + str + " from: " + socket.toString());
                     // send to all
                     sendMessageToAllClients(str);
                     callback.accept(str);

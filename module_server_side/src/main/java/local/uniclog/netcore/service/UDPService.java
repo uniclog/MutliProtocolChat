@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -20,9 +21,14 @@ import java.util.function.Consumer;
 public class UDPService extends Thread implements Protocol {
     private static final int BUFFER_SIZE = 1024;
     private final AtomicBoolean loop = new AtomicBoolean(false);
+    private final Consumer<String> textToConsole;
     private DatagramChannel socket;
     private List<ClientModel> udpClients = Collections.synchronizedList(new ArrayList<>());
     private Consumer<String> callback;
+
+    public UDPService(Consumer<String> callback) {
+        this.textToConsole = callback;
+    }
 
     public void setLoop(boolean loop) {
         this.loop.set(loop);
@@ -43,7 +49,7 @@ public class UDPService extends Thread implements Protocol {
     @SneakyThrows
     @Override
     public void run() {
-        System.out.println("udp: waiting for clients...");
+        sendMessageToConsole("udp: waiting for clients...");
         var buffer = ByteBuffer.allocate(BUFFER_SIZE);
         while (loop.get()) {
             buffer.clear();
@@ -54,12 +60,12 @@ public class UDPService extends Thread implements Protocol {
                 ClientModel client = getConnectionInfo(address);
                 if (!udpClients.contains(client)) {
                     udpClients.add(client);
-                    System.out.println("Add UDP client - " + client.getIp() + ":" + client.getPort());
+                    sendMessageToConsole("Add UDP client - " + client.getIp() + ":" + client.getPort());
                 }
-                System.out.println("\n UDP: receive - " + message + " from: " + client.getIp() + ":" + client.getPort());
+                sendMessageToConsole("\n UDP: receive - " + message + " from: " + client.getIp() + ":" + client.getPort());
 
                 if (message.equals("exit")) {
-                    System.out.printf("UDP: client - %s : lost connection%n", client.getAddress().toString());
+                    sendMessageToConsole(String.format("UDP: client - %s : lost connection%n", client.getAddress().toString()));
                     udpClients.remove(client);
                 }
                 // send to all
@@ -89,6 +95,13 @@ public class UDPService extends Thread implements Protocol {
 
     public void sendMessageToClient(String msg, ClientModel client) throws IOException {
         socket.send(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)), client.getAddress());
-        System.out.printf("UDP: send - %s : %s%n", msg, client.getAddress().toString());
+        sendMessageToConsole(String.format("UDP: send - %s : %s%n", msg, client.getAddress().toString()));
+    }
+
+    public void sendMessageToConsole(String message) {
+        System.out.println(message);
+        if (Objects.nonNull(textToConsole)) {
+            textToConsole.accept(message);
+        }
     }
 }
